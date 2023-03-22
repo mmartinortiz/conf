@@ -1,0 +1,86 @@
+---
+- name: Setup personal preferences
+  hosts: remote_hosts
+  vars:
+    user_name: user
+    vim_dir: "{{ ansible_env.HOME }}/.vim"
+  tasks:
+    - name: Install some basic dependencies
+      become: yes
+      package:
+        name:
+          - git
+          - python3-pip
+          - python3-venv
+
+    - name: Install Fish shell
+      become: yes
+      package:
+        name: fish
+        state: latest
+
+    - name: Copy config.fish to remote host
+      copy:
+        src: config.fish
+        dest: /home/{{ user_name }}/.config/fish/
+
+    - name: Set Fish as the default shell
+      become: yes
+      shell: |
+        echo "/usr/bin/fish" >> /etc/shells
+        chsh -s /usr/bin/fish {{ user_name }}
+
+    - name: Install Vim
+      become: yes
+      package:
+        name:
+          - vim
+          - vim-scripts
+        state: latest
+
+    - name: Copy vimrc to remote host
+      copy:
+        src: vimrc
+        dest: /home/{{ user_name }}/.vimrc
+
+    - name: Ensure .vim/{autoload,bundle} directory exists
+      file:
+        path: "{{ item }}"
+        state: directory
+        recurse: no
+        mode: 0750
+      loop:
+        - "{{ vim_dir }}"
+        - "{{ vim_dir }}/autoload"
+        - "{{ vim_dir }}/bundle"
+
+    - name: Install and configure Vim with Vim-plug
+      get_url:
+        dest: /home/{{ user_name }}/.vim/autoload/plug.vim
+        url: https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+
+    - name: Install plugins
+      shell: |
+        vim +PlugInstall +qall
+
+    - name: Install Go
+      become: yes
+      shell: |
+        wget https://dl.google.com/go/go{{ version }}.linux-amd64.tar.gz
+        tar -C /home/{{ user_name }}/.local -xzf go{{ version }}.linux-amd64.tar.gz
+        rm go{{ version }}.linux-amd64.tar.gz
+      vars:
+        version: "{{ go_version | default('1.20.2') }}"
+
+    - name: Install Rust
+      become: yes
+      shell: |
+        curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain {{ version }} -y
+      vars:
+        version: "{{ rust_version | default('stable') }}"
+
+    - name: Install pix
+      become: yes
+      become_user: "{{ user_name }}"
+      command: |
+        python3 -m pip install --user pipx
