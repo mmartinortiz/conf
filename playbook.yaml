@@ -12,6 +12,11 @@
           - git
           - python3-pip
           - python3-venv
+          - vim
+          - vim-scripts
+          - pipx
+          - bat
+        state: latest
 
     - name: Install Fish shell
       become: yes
@@ -29,14 +34,6 @@
       shell: |
         echo "/usr/bin/fish" >> /etc/shells
         chsh -s /usr/bin/fish {{ user_name }}
-
-    - name: Install Vim
-      become: yes
-      package:
-        name:
-          - vim
-          - vim-scripts
-        state: latest
 
     - name: Copy vimrc to remote host
       copy:
@@ -63,6 +60,35 @@
       shell: |
         vim +PlugInstall +qall
 
+    - name: Ensure the fonts directory exists
+      file:
+        path: /home/{{ user_name }}/.local/share/fonts
+        state: directory
+
+    - name: Install the Hack font
+      unarchive:
+        src: https://github.com/ryanoasis/nerd-fonts/releases/download/v2.2.2/Hack.zip
+        dest: /home/{{ user_name }}/.local/share/fonts/
+        remote_src: yes
+
+    - name: Regenerate font cache
+      command: fc-cache -f -v
+
+    - name: Fish, cloning the Oh My Fish!
+      git:
+        repo: 'https://github.com/oh-my-fish/oh-my-fish'
+        dest: '/tmp/omf'
+        clone: yes
+
+    - name: Fish, installing Oh My Fish!
+      command: /tmp/omf/bin/install --yes --offline --noninteractive
+
+    - name: Fish, installing 'Autoload Python Virtual Environment'
+      command: 'fish -c "omf install https://github.com/dgrant/fish-autovenv2"'
+
+    - name: Fish, installing 'bass'
+      command: 'fish -c "omf install bass"'
+
     - name: Install Go
       become: yes
       shell: |
@@ -78,9 +104,3 @@
         curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain {{ version }} -y
       vars:
         version: "{{ rust_version | default('stable') }}"
-
-    - name: Install pix
-      become: yes
-      become_user: "{{ user_name }}"
-      command: |
-        python3 -m pip install --user pipx
