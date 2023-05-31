@@ -89,6 +89,9 @@
     - name: Fish, installing 'bass'
       command: 'fish -c "omf install bass"'
 
+    - name: Fish, install 'simple-ass-prompt' theme
+      command: 'fish -c "omf install simple-ass-prompt"'
+
     - name: Install Go
       become: yes
       shell: |
