@@ -107,3 +107,10 @@
         curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain {{ version }} -y
       vars:
         version: "{{ rust_version | default('stable') }}"
+
+    - name: Install DUA (Disk Usage Analyzer)
+      command: gargo install dua-cli
+      tags:
+        - rust-apps
+
+
